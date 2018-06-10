@@ -33,9 +33,7 @@
 
 #include <string>
 
-#ifdef LD_SHIM_LIBS
 #include "linker_debug.h"
-#endif
 #include "linker_namespaces.h"
 
 #define FLAG_LINKED           0x00000001
@@ -346,7 +344,6 @@ struct soinfo {
 // This function is used by dlvsym() to calculate hash of sym_ver
 uint32_t calculate_elf_hash(const char* name);
 
-#ifdef LD_SHIM_LIBS
 typedef std::pair<std::string, std::string> ShimDescriptor;
 extern std::vector<const ShimDescriptor *> matched_pairs;
 void get_shim_matching_pairs(const char *const path);
@@ -361,15 +358,12 @@ void for_each_matching_shim(const char *const path, F action) {
     action(one_pair->second.c_str());
   }
 }
-#endif
 
 const char* fix_dt_needed(const char* dt_needed, const char* sopath);
 
 template<typename F>
 void for_each_dt_needed(const soinfo* si, F action) {
-#ifdef LD_SHIM_LIBS
   for_each_matching_shim(si->get_realpath(), action);
-#endif
   for (const ElfW(Dyn)* d = si->dynamic; d->d_tag != DT_NULL; ++d) {
     if (d->d_tag == DT_NEEDED) {
       action(fix_dt_needed(si->get_string(d->d_un.d_val), si->get_realpath()));

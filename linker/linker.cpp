@@ -699,7 +699,6 @@ enum walk_action_result_t : uint32_t {
   kWalkSkip = 2
 };
 
-#ifdef LD_SHIM_LIBS
 // g_ld_all_shim_libs maintains the references to memory as it used
 // in the soinfo structures and in the g_active_shim_libs list.
 static std::vector<ShimDescriptor> g_ld_all_shim_libs;
@@ -750,7 +749,6 @@ void get_shim_matching_pairs(const char *const path) {
     return a_pair->first == path;
   });
 }
-#endif
 
 // This function walks down the tree of soinfo dependencies
 // in breadth-first order and
@@ -1169,9 +1167,7 @@ const char* fix_dt_needed(const char* dt_needed, const char* sopath __unused) {
 
 template<typename F>
 static void for_each_dt_needed(const ElfReader& elf_reader, F action) {
-#ifdef LD_SHIM_LIBS
   for_each_matching_shim(elf_reader.name(), action);
-#endif
   for (const ElfW(Dyn)* d = elf_reader.dynamic(); d->d_tag != DT_NULL; ++d) {
     if (d->d_tag == DT_NEEDED) {
       action(fix_dt_needed(elf_reader.get_string(d->d_un.d_val), elf_reader.name()));
@@ -2066,9 +2062,7 @@ void* do_dlopen(const char* name, int flags,
   }
 
   ProtectedDataGuard guard;
-#ifdef LD_SHIM_LIBS
   reset_g_active_shim_libs();
-#endif
   soinfo* si = find_library(ns, translated_name, flags, extinfo, caller);
   loading_trace.End();
 
