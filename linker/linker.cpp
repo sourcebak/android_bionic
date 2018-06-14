@@ -738,9 +738,8 @@ void parse_LD_SHIM_LIBS(const char* path) {
   reset_g_active_shim_libs();
 }
 
-void shim_matching_pairs(const char *const path) {
-  INFO("Finding shim libs for \"%s\"\n", path);
-
+void get_shim_matching_pairs(const char *const path) {
+  matched_pairs.clear();
   g_active_shim_libs.for_each([&](const ShimDescriptor *a_pair) {
     if (a_pair->first == path) {
       matched_pairs.push_back(a_pair);
