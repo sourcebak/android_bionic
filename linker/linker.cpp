@@ -711,7 +711,7 @@ static std::vector<ShimDescriptor> g_ld_all_shim_libs;
 static linked_list_t<const ShimDescriptor> g_active_shim_libs;
 
 // matched_pairs are shim libs that load over their corresponding
-// target libraries/executables, which are DT_NEEDED.
+// target libraries, which are DT_NEEDED.
 std::vector<const ShimDescriptor *> matched_pairs;
 
 static void reset_g_active_shim_libs(void) {
@@ -738,9 +738,8 @@ void parse_LD_SHIM_LIBS(const char* path) {
   reset_g_active_shim_libs();
 }
 
-void shim_matching_pairs(const char *const path) {
-  INFO("Finding shim libs for \"%s\"\n", path);
-
+void get_shim_matching_pairs(const char *const path) {
+  matched_pairs.clear();
   g_active_shim_libs.for_each([&](const ShimDescriptor *a_pair) {
     if (a_pair->first == path) {
       matched_pairs.push_back(a_pair);
