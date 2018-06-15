@@ -1167,7 +1167,6 @@ const char* fix_dt_needed(const char* dt_needed, const char* sopath __unused) {
 
 template<typename F>
 static void for_each_dt_needed(const ElfReader& elf_reader, F action) {
-  for_each_matching_shim(elf_reader.name(), action);
   for (const ElfW(Dyn)* d = elf_reader.dynamic(); d->d_tag != DT_NULL; ++d) {
     if (d->d_tag == DT_NEEDED) {
       action(fix_dt_needed(elf_reader.get_string(d->d_un.d_val), elf_reader.name()));
@@ -1561,6 +1560,10 @@ bool find_libraries(android_namespace_t* ns,
                     std::vector<android_namespace_t*>* namespaces) {
   // Step 0: prepare.
   LoadTaskList load_tasks;
+
+  for_each_matching_shim(start_with->get_realpath(), [&](const char* name) {
+    load_tasks.push_back(LoadTask::create(name, start_with, ns, &readers_map));
+  });
 
   for (size_t i = 0; i < library_names_count; ++i) {
     const char* name = library_names[i];
