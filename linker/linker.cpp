@@ -1167,7 +1167,6 @@ const char* fix_dt_needed(const char* dt_needed, const char* sopath __unused) {
 
 template<typename F>
 static void for_each_dt_needed(const ElfReader& elf_reader, F action) {
-  for_each_matching_shim(elf_reader.name(), action);
   for (const ElfW(Dyn)* d = elf_reader.dynamic(); d->d_tag != DT_NULL; ++d) {
     if (d->d_tag == DT_NEEDED) {
       action(fix_dt_needed(elf_reader.get_string(d->d_un.d_val), elf_reader.name()));
@@ -1731,6 +1730,29 @@ bool find_libraries(android_namespace_t* ns,
       (start_with != nullptr && add_as_children) ? 1 : soinfos_count,
       [&] (soinfo* si) {
     if (ns->is_accessible(si)) {
+      if (!(add_as_children && si == start_with)) {
+        for_each_matching_shim(si->get_realpath(), [&](const char* name) {
+          soinfo* si_shim;
+          if (find_libraries(ns,
+                             start_with,
+                             &name,
+                             1,
+                             &si_shim,
+                             nullptr,
+                             0,
+                             rtld_flags,
+                             extinfo,
+                             false /* add_as_children */,
+                             true /* search_linked_namespaces */,
+                             readers_map)) {
+            start_with->add_child(si_shim);
+            if (si_shim->is_linked()) {
+              si_shim->increment_ref_count();
+            }
+            local_group.push_back(si_shim);
+          }
+        });
+      }
       local_group.push_back(si);
       return kWalkContinue;
     } else {
