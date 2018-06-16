@@ -1167,7 +1167,6 @@ const char* fix_dt_needed(const char* dt_needed, const char* sopath __unused) {
 
 template<typename F>
 static void for_each_dt_needed(const ElfReader& elf_reader, F action) {
-  for_each_matching_shim(elf_reader.name(), action);
   for (const ElfW(Dyn)* d = elf_reader.dynamic(); d->d_tag != DT_NULL; ++d) {
     if (d->d_tag == DT_NEEDED) {
       action(fix_dt_needed(elf_reader.get_string(d->d_un.d_val), elf_reader.name()));
@@ -1640,6 +1639,25 @@ bool find_libraries(android_namespace_t* ns,
       soinfos[soinfos_count++] = si;
     }
   }
+
+  // Reconstruct the list, and inject the shim if it matches.
+  LoadTaskList load_tasks_s;
+  for (auto&& task : load_tasks) {
+    soinfo* si = task->get_soinfo();
+    soinfo* needed_by = task->get_needed_by();
+
+    if (needed_by == nullptr) continue;
+    for_each_matching_shim(si->get_realpath(), [&](const char* name) {
+      LoadTask* shim_task = LoadTask::create(name, needed_by, ns, task->get_readers_map());
+      shim_task->set_extinfo(task->get_extinfo);
+      shim_task->set_dt_needed(task->is_dt_needed);
+      load_tasks_s.push_back(shim_task);
+    }
+
+    load_tasks_s.push_back(task);
+  }
+  load_tasks = load_tasks_s;
+  load_tasks_s.clear();
 
   // Step 2: Load libraries in random order (see b/24047022)
   LoadTaskList load_list;
