@@ -1640,25 +1640,6 @@ bool find_libraries(android_namespace_t* ns,
     }
   }
 
-  // Reconstruct the list, and inject the shim if it matches.
-  LoadTaskList load_tasks_s;
-  for (auto&& task : load_tasks) {
-    soinfo* si = task->get_soinfo();
-    soinfo* needed_by = task->get_needed_by();
-
-    if (needed_by == nullptr) continue;
-    for_each_matching_shim(si->get_realpath(), [&](const char* name) {
-      LoadTask* shim_task = LoadTask::create(name, needed_by, ns, task->get_readers_map());
-      shim_task->set_extinfo(task->get_extinfo);
-      shim_task->set_dt_needed(task->is_dt_needed);
-      load_tasks_s.push_back(shim_task);
-    }
-
-    load_tasks_s.push_back(task);
-  }
-  load_tasks = load_tasks_s;
-  load_tasks_s.clear();
-
   // Step 2: Load libraries in random order (see b/24047022)
   LoadTaskList load_list;
   for (auto&& task : load_tasks) {
@@ -1749,6 +1730,29 @@ bool find_libraries(android_namespace_t* ns,
       (start_with != nullptr && add_as_children) ? 1 : soinfos_count,
       [&] (soinfo* si) {
     if (ns->is_accessible(si)) {
+      if (!add_as_children) {
+        for_each_matching_shim(si->get_realpath(), [&](const char* name) {
+          soinfo* si_shim;
+          if (find_libraries(ns,
+                             start_with,
+                             &name,
+                             1,
+                             &si_shim,
+                             nullptr,
+                             0,
+                             rtld_flags,
+                             extinfo,
+                             false /* add_as_children */,
+                             true /* search_linked_namespaces */,
+                             readers_map)) {
+            start_with->add_child(si_shim);
+            if (si_shim->is_linked()) {
+              si_shim->increment_ref_count();
+            }
+            local_group.push_back(si_shim);
+          }
+        });
+      }
       local_group.push_back(si);
       return kWalkContinue;
     } else {
