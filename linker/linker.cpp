@@ -1749,6 +1749,7 @@ bool find_libraries(android_namespace_t* ns,
             if (si_shim->is_linked()) {
               si_shim->increment_ref_count();
             }
+            INFO("Shim \"%s\" preloads \"%s\".", si_shim->get_realpath(), si->get_realpath());
             local_group.push_back(si_shim);
           }
         });
