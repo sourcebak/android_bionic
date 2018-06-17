@@ -1730,30 +1730,28 @@ bool find_libraries(android_namespace_t* ns,
       (start_with != nullptr && add_as_children) ? 1 : soinfos_count,
       [&] (soinfo* si) {
     if (ns->is_accessible(si)) {
-      if (!add_as_children) {
-        for_each_matching_shim(si->get_realpath(), [&](const char* name) {
-          soinfo* si_shim;
-          if (find_libraries(ns,
-                             start_with,
-                             &name,
-                             1,
-                             &si_shim,
-                             nullptr,
-                             0,
-                             rtld_flags,
-                             extinfo,
-                             false /* add_as_children */,
-                             true /* search_linked_namespaces */,
-                             readers_map)) {
-            start_with->add_child(si_shim);
-            if (si_shim->is_linked()) {
-              si_shim->increment_ref_count();
-            }
-            INFO("Shim \"%s\" preloads \"%s\".", si_shim->get_realpath(), si->get_realpath());
-            local_group.push_back(si_shim);
+      for_each_matching_shim(si->get_realpath(), [&](const char* name) {
+        soinfo* si_shim;
+        if (find_libraries(ns,
+                           start_with,
+                           &name,
+                           1,
+                           &si_shim,
+                           nullptr,
+                           0,
+                           rtld_flags,
+                           extinfo,
+                           false /* add_as_children */,
+                           true /* search_linked_namespaces */,
+                           readers_map)) {
+          start_with->add_child(si_shim);
+          if (si_shim->is_linked()) {
+            si_shim->increment_ref_count();
           }
-        });
-      }
+          INFO("Shim \"%s\" preloads \"%s\".", si_shim->get_realpath(), si->get_realpath());
+          local_group.push_back(si_shim);
+        }
+      });
       local_group.push_back(si);
       return kWalkContinue;
     } else {
